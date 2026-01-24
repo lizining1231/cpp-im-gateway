@@ -1,0 +1,1 @@
+/usr/bin/c++ "CMakeFiles/cpp-im-gateway.dir/src/main.cpp.o" "CMakeFiles/cpp-im-gateway.dir/src/server/echo_server.cpp.o" -o cpp-im-gateway  -lpthread 

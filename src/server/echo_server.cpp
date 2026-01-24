@@ -6,7 +6,7 @@
 #include<sys/socket.h>
 #include<stdexcept>
 
-#define BUFFER_SIZE 10
+#define BUFFER_SIZE 1024
 #define BACKLOG 1
 
 EchoServer::EchoServer(int port):client_fd(-1),server_fd(-1),port(port){
@@ -63,7 +63,7 @@ void EchoServer::setupSocket(){
     sockaddr_in server_addr{};
     server_addr.sin_family=AF_INET;
     server_addr.sin_addr.s_addr=INADDR_ANY;
-    server_addr.sin_port=htons(8080);
+    server_addr.sin_port=htons(port);
 
     if(bind(server_fd,(sockaddr*)&server_addr,sizeof(server_addr))<0){
         throw std::runtime_error("Bind failed");
