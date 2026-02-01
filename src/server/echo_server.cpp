@@ -10,56 +10,61 @@
 #include<netinet/tcp.h>
 
 #define BUFFER_SIZE 1024
-#define BACKLOG 1
+#define BACKLOG 128
 
-EchoServer::EchoServer(int port):client_fd(-1),server_fd(-1),port(port){
-      std::cout<<"调试：构造函数被调用"<<std::endl;// 调试
+EchoServer::EchoServer(int port):server_fd(-1),port(port){
+    int client_fd=-1;
     std::cout<<"the initialized echo server on port"<<port<<std::endl;
 };
+
 EchoServer::~EchoServer(){
-     std::cout<<"调试：析构函数被调用"<<std::endl;// 调试
+
     stop();
 };
 
 
 void EchoServer::start(){
-    std::cout<<"调试：start()函数被调用"<<std::endl;// 调试
 
     setupSocket();
-    acceptClient();
-    handleClient();
+    int client_fd=acceptClient();
+    handleClient(client_fd);
 
-    cleanup();
+    cleanup(client_fd);
+    
 }   
 
 
 void EchoServer::stop(){
-    std::cout<<"调试：stop()函数被调用"<<std::endl;// 调试
-    cleanup();
+
+    cleanup(-1);
     std::cerr<<"Server stoped"<<std::endl;
 }
 
 
-void EchoServer::cleanup(){
-    std::cout<<"调试：cleanup()函数被调用"<<std::endl;// 调试
+void EchoServer::cleanup(int client_fd){
+
     if(client_fd>=0){
         shutdown(client_fd, SHUT_WR);// 发送FIN
-        sleep(1);// 等1秒，让客户端有机会回应
+
+        
         close(client_fd);
+    
         client_fd=-1;
     }
 
     if(server_fd>=0){
         shutdown(server_fd, SHUT_WR);// 发送FIN
 
+
         close(server_fd);
+
         server_fd=-1;
     }
 }
 
 
 void EchoServer::setupSocket(){
-     std::cout<<"调试：setupSocket()函数被调用"<<std::endl;// 调试
+
     // 设置套接字
     server_fd=socket(AF_INET,SOCK_STREAM,0);
     if(server_fd<0){
@@ -92,40 +97,21 @@ void EchoServer::setupSocket(){
 }
 
 
-void EchoServer::acceptClient(){
-      std::cout<<"调试：acceptClient()函数被调用"<<std::endl;// 调试
+int EchoServer::acceptClient(){
+
     std::cout<<"Waiting for client connection..."<<std::endl;
 
     sockaddr_in client_addr{};
     socklen_t client_len=sizeof(client_addr);
 
-    // 阻塞等待客户端连接
-    client_fd=accept(server_fd,(sockaddr*)&client_addr,&client_len);
+    int client_fd;// 客户端的client_fd作为局部变量，每个连接独立管理，互不干扰
+    
+    client_fd=accept(server_fd,(sockaddr*)&client_addr,&client_len);// 阻塞等待客户端连接
 
     if(client_fd<0){
         throw std::runtime_error(
             std::string("Accept failed:")+strerror(errno)
         );
-         int flag = 1;
-    
-    // 1. 禁用Nagle算法（立即发送数据）
-    if(setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &flag, sizeof(flag)) < 0){
-        std::cerr << "Warning: Failed to set TCP_NODELAY" << std::endl;
-    }
-    
-    // 2. 禁用延迟确认（立即发送ACK）
-    flag = 1;
-    if(setsockopt(client_fd, IPPROTO_TCP, TCP_QUICKACK, &flag, sizeof(flag)) < 0){
-        std::cerr << "Warning: Failed to set TCP_QUICKACK" << std::endl;
-    }
-    
-    // 3. 设置TCP立即发送FIN（不等待）
-    struct linger linger_opt;
-    linger_opt.l_onoff = 1;      // 启用linger
-    linger_opt.l_linger = 0;     // 超时时间为0，立即关闭
-    if(setsockopt(client_fd, SOL_SOCKET, SO_LINGER, &linger_opt, sizeof(linger_opt)) < 0){
-        std::cerr << "Warning: Failed to set SO_LINGER" << std::endl;
-    }
     }
 
     // 将二进制的IP地址转换成字符串
@@ -133,13 +119,15 @@ void EchoServer::acceptClient(){
     inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);
 
     //将网络字节序转化为主机字节序
+
     std::cout<<client_ip<<":"<<ntohs(client_addr.sin_port)<<"(fd:"<<client_fd<<")"<<std::endl;
 
+    return client_fd;
 }
 
 
-void EchoServer::handleClient(){
-      std::cout<<"调试：handleClient()函数被调用"<<std::endl;// 调试
+void EchoServer::handleClient(int client_fd){
+
     char buffer[BUFFER_SIZE];
     while(true){
         ssize_t bytes_read=recv(client_fd,buffer,BUFFER_SIZE-1,0);

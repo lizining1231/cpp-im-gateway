@@ -11,14 +11,13 @@ class EchoServer{
 
     private:
 
-    int client_fd;
     int server_fd;
     int port;
     
     void setupSocket();
-    void acceptClient();
-    void handleClient();
-    void cleanup();
+    int acceptClient();
+    void handleClient(int client_fd);
+    void cleanup(int client_fd);
    
 };
 #endif
