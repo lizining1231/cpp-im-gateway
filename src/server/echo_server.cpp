@@ -25,11 +25,17 @@ EchoServer::~EchoServer(){
 void EchoServer::start(){
 
     setupSocket();
+
+    while(true){
+
     int client_fd=acceptClient();
     handleClient(client_fd);
 
     cleanupClient(client_fd);
     
+    }
+    cleanupServer();
+
 }   
 
 
