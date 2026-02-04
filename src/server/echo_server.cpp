@@ -146,13 +146,32 @@ void EchoServer::handleClient(int client_fd){
             break;
         }
 
-        buffer[bytes_read]='\0';// 读取到bytes_read字节，设此字节为‘\0’
+    buffer[bytes_read]='\0';// 读取到bytes_read字节，设此字节为‘\0’
+    
+    std::string response;
 
-        if(send(client_fd,buffer,bytes_read,0)<0){
-            std::cerr<<"Send error"<<std::endl;
-            break;
+    bool is_http_request=(std::strstr(buffer,"HTTP/")!=NULL);
+
+        if (is_http_request) {
+            // 为测试工具提供HTTP响应
+            response=
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: Text/plain\r\n"
+            "Content-Length: 12\r\n"
+            "Connection: close\r\n"
+            "\r\n"
+            "hello,world\n";
+        }else{
+            // 正常echo响应
+            response=std::string(buffer,bytes_read);
         }
-        std::cout<<"recv num："<<bytes_read<<std::endl;
+        
+    if(send(client_fd, response.c_str(), response.length(), 0)<0){
+        std::cerr<<"Echo send error"<<std::endl;
+        break;
+        }
+
+        std::cout<<"recv num:"<<bytes_read<<std::endl;
     }
 
 }
