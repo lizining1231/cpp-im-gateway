@@ -12,67 +12,26 @@
 #define BUFFER_SIZE 1024
 #define BACKLOG 128
 
-EchoServer::EchoServer(int port):server_fd(-1),port(port){
-    int client_fd=-1;
-    std::cout<<"the initialized echo server on port"<<port<<std::endl;
-};
+Socket::Socket(int port):server_fd(-1){
+    initSocket(port);
+}
 
-EchoServer::~EchoServer(){
-    stop();
-};
-
-
-void EchoServer::start(){
-
-    setupSocket();
-
-    while(true){
-
-    int client_fd=acceptClient();
-    handleClient(client_fd);
-
-    cleanupClient(client_fd);
-    
-    }
+Socket::~Socket(){
     cleanupServer();
-
-}   
-
-
-void EchoServer::stop(){
-    cleanupServer();
-    std::cerr<<"Server stoped"<<std::endl;
 }
 
-
-void EchoServer::cleanupClient(int client_fd){
-    if(client_fd>=0){
-        shutdown(client_fd, SHUT_WR);// 发送FIN
-
-        close(client_fd);
-    
-        client_fd=-1;
-    }
+int Socket::getServer_fd() const{
+    return server_fd;
 }
 
-void EchoServer::cleanupServer(){
-     if(server_fd>=0){
-        shutdown(server_fd, SHUT_WR);// 发送FIN
-
-        close(server_fd);
-
-        server_fd=-1;
-    }
-}
-
-void EchoServer::setupSocket(){
-
+void Socket::initSocket(int port){
     // 设置套接字
     server_fd=socket(AF_INET,SOCK_STREAM,0);
+   
     if(server_fd<0){
         throw std::runtime_error("Socket creation failed");
     }
-
+    
     // 设置套接字选项
     int opt=1;
     if(setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR,&opt,sizeof(opt))<0){
@@ -88,7 +47,7 @@ void EchoServer::setupSocket(){
     if(bind(server_fd,(sockaddr*)&server_addr,sizeof(server_addr))<0){
         throw std::runtime_error("Bind failed");
     }
-
+    
     //监听
     if(listen(server_fd,BACKLOG)<0){
         throw std::runtime_error("Listen failed");
@@ -98,16 +57,51 @@ void EchoServer::setupSocket(){
 
 }
 
+void Socket::cleanupServer(){
+     if(server_fd>=0){
+        shutdown(server_fd, SHUT_WR);// 发送FIN
+
+        close(server_fd);
+
+        server_fd=-1;
+    }
+}
+
+
+// EchoServer类的实现
+EchoServer::EchoServer(int port):socket(port),port(port){
+    int client_fd=-1;
+    
+    std::cout<<"the initialized echo server on port"<<port<<std::endl;
+}
+
+EchoServer::~EchoServer(){}
+
+
+void EchoServer::start(){
+    socket.getServer_fd();
+
+    while(true){
+    int client_fd=acceptClient();
+    handleClient(client_fd);
+
+    cleanupClient(client_fd);
+    }
+}   
+
 
 int EchoServer::acceptClient(){
-
+    
     std::cout<<"Waiting for client connection..."<<std::endl;
-
+    
+    int server_fd=socket.getServer_fd();
+    
     sockaddr_in client_addr{};
     socklen_t client_len=sizeof(client_addr);
 
     int client_fd;// 客户端的client_fd作为局部变量，每个连接独立管理，互不干扰
     
+
     client_fd=accept(server_fd,(sockaddr*)&client_addr,&client_len);// 阻塞等待客户端连接
 
     if(client_fd<0){
@@ -170,9 +164,19 @@ void EchoServer::handleClient(int client_fd){
         std::cerr<<"Echo send error"<<std::endl;
         break;
         }
-
         std::cout<<"recv num:"<<bytes_read<<std::endl;
     }
 
 }
+
+void EchoServer::cleanupClient(int client_fd){
+     if(client_fd>=0){
+        shutdown(client_fd, SHUT_WR);// 发送FIN
+
+        close(client_fd);
+
+        client_fd=-1;
+    }
+}
+
 
