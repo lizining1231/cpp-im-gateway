@@ -1,0 +1,83 @@
+# ===================== C++ IM Gateway - Docker 忽略规则=======================
+
+# 构建输出目录
+build/
+docker-build/
+bin/
+obj/
+dist/
+out/
+
+# 编译中间文件
+*.o
+*.a
+*.so
+*.dll
+*.dylib
+*.exe
+*.out
+
+# 调试文件
+*.debug
+*.pdb
+*.idb
+*.ilk
+
+# 缓存和临时文件
+.cache/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+.DS_Store
+
+# 版本控制
+.git/
+.gitignore
+.gitmodules
+.gitattributes
+.svn/
+
+# IDE 和编辑器配置
+.vscode/
+.idea/
+*.code-workspace
+.project
+.classpath
+.settings/
+
+# 文档
+*.md
+docs/
+*.pdf
+*.docx
+*.pptx
+
+# 日志文件
+*.log
+logs/
+*.trace
+
+# 本地配置文件
+.env
+.env.local
+.env.*.local
+config.local.*
+*.local.yaml
+*.local.json
+docker-compose.override.yml
+
+# 测试相关
+test-results/
+coverage/
+*.db
+*.sqlite
+*.sqlite3
+
+# 大文件
+*.tar.gz
+*.zip
+*.rar
+*.7z
+*.iso
