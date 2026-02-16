@@ -1,4 +1,4 @@
-#include "server/echo_server.h"
+#include "server/TCPserver.h"
 #include<iostream>
 #include <cstdlib>
 #include <string>
@@ -21,12 +21,12 @@ int main(int argc,char* argv[]){
     
     try{
 
-        std::cout<<"Echo server started"<<std::endl;
+        std::cout<<"TCP server started"<<std::endl;
 
-        EchoServer server(port);
-        server.start();
+        TCPServer server(port);
+        server.eventLoop();
 
-        std::cout<<"Echo server stopped"<<std::endl;
+        std::cout<<"TCP server stopped"<<std::endl;
         return 0;
 
     }catch(const std::runtime_error&e){
