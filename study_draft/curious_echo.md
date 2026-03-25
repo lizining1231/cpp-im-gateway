@@ -338,3 +338,15 @@ n-to-hl()：网络→主机（32位IP）
 
 **怎么会这样！我写了130行代码，报错在398行**
 ![换行符的作用，从recv返回值体现](image.png)
+
+
+**从外部访问服务**
+数据包经过IP层内部的Netfiler，触发Netfiler中的PREROUTING钩子
+
+PREROUTING钩子→触发iptables检查规则中的DNAT规则
+
+DNAT规则→将数据包的目标IP从127.0.0.1更改为172.17.0.2
+
+【细节】虽然PREROUTING钩子的代码调用点在IP层，但是其iptables、conntrack等功能组件的实现是独立于TCP层与IP层的，在二者之间，为什么这么设计？因为在方便数据包流经IP层时既可以访问IP头信息又可以访问TCP头信息且不与TCP实现杂糅。
+
+【细节】为什么这里是172.17.0.2？
