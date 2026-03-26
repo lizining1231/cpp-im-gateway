@@ -24,32 +24,6 @@ compile_commands.json
 
 # Executables
 cpp-im-gateway
-# Build files
-build/
-bin/
-lib/
-obj/
-*.o
-*.so
-*.a
-*.out
-TCPserver
-
-# CMake generated files
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-compile_commands.json
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Executables
-cpp-im-gateway
 
 # Environment files
 .env
@@ -72,3 +46,9 @@ benchmark_report_*.txt.tmp
 test_*.txt
 test_*.log
 report_*.txt
+
+# Custom folders to ignore
+wrk_result/
+study_draft/
+temporary_scripts/
+benchmark_report/
