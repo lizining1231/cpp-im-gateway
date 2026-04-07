@@ -13,7 +13,7 @@ class SocketListener{
     explicit SocketListener(int port);
     ~SocketListener();
     int getFd() const;
-    //int accept();
+    int accept();
     void close();
 
     private:
@@ -25,6 +25,22 @@ class SocketListener{
 
 };
 
+class SelectPoller{
+    public:
+    SelectPoller();
+    ~SelectPoller();
+    private:
+    int port;
+    SocketListener listener;
+
+    std::vector<int> client_fds;
+
+    fd_set all_fds;
+    fd_set read_fds;
+    int max_fd;
+
+    int wait();
+};
 
 class Buffer{
     public:
@@ -49,32 +65,26 @@ class TCPServer{
     TCPServer(int port);
     ~TCPServer();
 
-    //void start();
     void eventLoop();
-
-    /*using MessageCallback=std::function<std::string (char const* msg,ssize_t len)>;
-    void setMessageCallback(MessageCallback cb);*/
     
     using MessageCallback=std::string (*)(char const* msg,ssize_t len);
     void setMessageCallback(MessageCallback cb);
 
     private:
-    int port;
-    SocketListener listener;
+    std::vector<int> client_fds;
 
     fd_set all_fds;
     fd_set read_fds;
-
     int max_fd;
-    int server_fd;
-    std::vector<int> client_fds;
+
+
     std::map<int,Connection>connections;    // 一个fd对应一个连接
 
-    int accept();
+    //int accept();
     void handleClientData(int client_fd);
     void cleanupClient();
     MessageCallback handler;
-
+    SocketListener listener;
 };
 
 #endif

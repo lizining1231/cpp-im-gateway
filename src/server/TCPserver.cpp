@@ -66,6 +66,13 @@ void SocketListener::initSocket(int port){
 
 }
 
+int SocketListener::accept(){
+    sockaddr_in client_addr{};
+    socklen_t client_len = sizeof(client_addr);
+
+    int client_fd=::accept(listen_fd_,(sockaddr*)&client_addr,&client_len);
+    return client_fd;
+}
 
 void SocketListener::close(){
      if(listen_fd_>=0){
@@ -75,6 +82,39 @@ void SocketListener::close(){
 
         listen_fd_=-1;
     }
+}
+
+int SelectPoller::wait(){
+    int listen_fd=listener.getFd();
+
+    sockaddr_in client_addr{};
+    socklen_t client_len = sizeof(client_addr);
+    
+    //客户端的client_fd作为局部变量, 每个连接独立管理, 互不干扰
+    int client_fd=listener.accept();
+
+    if(client_fd<0){
+        throw std::runtime_error(
+            std::string("Accept failed:")+strerror(errno)
+        );
+    }
+    if(client_fd>0){
+        FD_SET(client_fd,&all_fds);   // 把新客户端加入被监听队伍
+        client_fds.push_back(client_fd);
+    }
+    if(client_fd>max_fd){
+        max_fd=client_fd;   // client_fd是递增的, 可以用来重新设置最大值
+    }
+
+    // 将二进制的IP地址转换成字符串
+    char client_ip[INET_ADDRSTRLEN];
+    inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);
+
+    //将网络字节序转化为主机字节序
+    std::cout<<client_ip<<":"<<ntohs(client_addr.sin_port)<<"(fd:"<<client_fd<<")"<<std::endl;
+
+    return client_fd;
+
 }
 
 
@@ -99,9 +139,7 @@ Connection::Connection(int client_fd):client_fd(client_fd){}
 Connection::Connection(){}    // 当map找不到key值时会利用此默认构造函数来创建
 
 // TCPServer类的实现
-TCPServer::TCPServer(int port):listener(port),port(port){
-    int client_fd=-1;   // 局部变量, 随构造函数结束而结束
-    
+TCPServer::TCPServer(int port):listener(port){
     std::cout<<"the initialized TCP server on port"<<port<<std::endl;
 }
 
@@ -112,7 +150,6 @@ void TCPServer::setMessageCallback(MessageCallback handleMessage){
 }
 
 void TCPServer::eventLoop(){
-
     int listen_fd=listener.getFd();
 
     FD_ZERO(&all_fds);
@@ -139,7 +176,7 @@ void TCPServer::eventLoop(){
         }
 
     if(FD_ISSET(listen_fd,&read_fds)){
-        accept();
+        listener.accept();
         }
 
     for(int fd:client_fds){
@@ -150,40 +187,6 @@ void TCPServer::eventLoop(){
     }       
 
 }
-
-
-int TCPServer::accept(){
-    int listen_fd=listener.getFd();
-    
-    sockaddr_in client_addr{};
-    socklen_t client_len=sizeof(client_addr);
-
-    //客户端的client_fd作为局部变量, 每个连接独立管理, 互不干扰
-    int client_fd=::accept(listen_fd,(sockaddr*)&client_addr,&client_len);
-
-    if(client_fd<0){
-        throw std::runtime_error(
-            std::string("Accept failed:")+strerror(errno)
-        );
-    }
-    if(client_fd>0){
-        FD_SET(client_fd,&all_fds);   // 把新客户端加入被监听队伍
-        client_fds.push_back(client_fd);
-    }
-    if(client_fd>max_fd){
-        max_fd=client_fd;   // client_fd是递增的, 可以用来重新设置最大值
-    }
-
-    // 将二进制的IP地址转换成字符串
-    char client_ip[INET_ADDRSTRLEN];
-    inet_ntop(AF_INET,&client_addr.sin_addr,client_ip,INET_ADDRSTRLEN);
-
-    //将网络字节序转化为主机字节序
-    std::cout<<client_ip<<":"<<ntohs(client_addr.sin_port)<<"(fd:"<<client_fd<<")"<<std::endl;
-
-    return client_fd;
-}
-
 
 
 void TCPServer::handleClientData(int client_fd){
