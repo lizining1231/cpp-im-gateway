@@ -36,7 +36,6 @@ class SelectPoller{
     
     private:
     int port;
-    SocketListener listener;
     std::vector<int> client_fds;
 
     fd_set all_fds;
@@ -101,5 +100,3 @@ class TCPServer{
 };
 
 #endif
-
-

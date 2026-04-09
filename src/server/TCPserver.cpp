@@ -29,11 +29,9 @@ int SocketListener::getFd() const{
     return listen_fd_;
 }
 
-/*std::string& SocketListener::getRecv_buffer(){    // handleClient()要修改该成员变量, 所以采取引用
-    return recv_buffer;
-}*/
-
 void SocketListener::initSocket(int port){
+
+    
     // 设置套接字
     listen_fd_=socket(AF_INET,SOCK_STREAM,0);
    
@@ -99,7 +97,7 @@ void SocketListener::close(){
 }
 
 // SocketListener类没有无参构造函数，这里添加显示构造
-SelectPoller::SelectPoller(int listen_fd):listener(listen_fd),max_fd(listen_fd){
+SelectPoller::SelectPoller(int listen_fd):max_fd(listen_fd){
 
     FD_ZERO(&all_fds);
     FD_SET(listen_fd,&all_fds);
@@ -261,5 +259,5 @@ void TCPServer::cleanupClient(){
     }
     client_fds.clear();
     }
-
+ 
 
