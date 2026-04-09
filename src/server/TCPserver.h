@@ -29,15 +29,17 @@ class SelectPoller{
     public:
     explicit SelectPoller(int listen_fd);
     ~SelectPoller()=default;
-    
+    std::vector<int> client_fds;
     void addFd(int client_fd);
     void wait();
     bool isReady(int fd)const;
+    void removeFd(int client_fd);
+    void closeAllClients();
     
     private:
     int port;
-    std::vector<int> client_fds;
-
+    
+    int listen_fd_;
     fd_set all_fds;
     fd_set read_fds;
     int max_fd;
@@ -83,20 +85,16 @@ class TCPServer{
     void setMessageCallback(MessageCallback cb);
 
     private:
-    std::vector<int> client_fds;
      
     std::map<int,Connection>connections;    // 一个fd对应一个连接
 
     void handleClientData(int client_fd);
-    void cleanupClient();
+    
     MessageCallback handler;
 
     SocketListener listener;
     SelectPoller poller;
 
-    fd_set all_fds;
-    fd_set read_fds;
-    int max_fd;
 };
 
 #endif

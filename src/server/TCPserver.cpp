@@ -30,8 +30,6 @@ int SocketListener::getFd() const{
 }
 
 void SocketListener::initSocket(int port){
-
-    
     // 设置套接字
     listen_fd_=socket(AF_INET,SOCK_STREAM,0);
    
@@ -59,7 +57,6 @@ void SocketListener::initSocket(int port){
     if(listen(listen_fd_,BACKLOG)<0){
         throw std::runtime_error("Listen failed");
     }
-
     std::cout<<"Server listening on port"<<port<<std::endl;
 
 }
@@ -89,7 +86,6 @@ int SocketListener::accept(){
 void SocketListener::close(){
      if(listen_fd_>=0){
         shutdown(listen_fd_, SHUT_WR);// 发送FIN
-
         ::close(listen_fd_);
 
         listen_fd_=-1;
@@ -97,7 +93,7 @@ void SocketListener::close(){
 }
 
 // SocketListener类没有无参构造函数，这里添加显示构造
-SelectPoller::SelectPoller(int listen_fd):max_fd(listen_fd){
+SelectPoller::SelectPoller(int listen_fd):listen_fd_(listen_fd),max_fd(listen_fd){
 
     FD_ZERO(&all_fds);
     FD_SET(listen_fd,&all_fds);
@@ -114,7 +110,6 @@ void SelectPoller::addFd(int client_fd){
     if(client_fd>max_fd){
         max_fd=client_fd;   // client_fd是递增的, 可以用来重新设置最大值
     }
-    return;
 }
 
 bool SelectPoller::isReady(int client_fd)const{
@@ -134,10 +129,36 @@ void SelectPoller::wait(){
     if(activity<0){
         throw std::runtime_error(std::string("select:")+strerror(errno));
         }
-
-    return;
+        
 }
 
+void SelectPoller::removeFd(int client_fd){
+    ::close(client_fd);
+    FD_CLR(client_fd,&all_fds);
+        
+    auto it=std::find(client_fds.begin(),client_fds.end(),client_fd);
+
+        
+    if(it!=client_fds.end()){
+    client_fds.erase(it);   // 将此fd从vector中删除
+    }
+
+    if(client_fd==max_fd){
+        max_fd=listen_fd_;   //重置fd再遍历寻找最大值
+        for(int fd:client_fds){
+            if(fd>max_fd)max_fd=fd;
+        }
+    }
+}
+
+void SelectPoller::closeAllClients(){
+    for(int fd:client_fds){
+        ::close(fd);
+        FD_CLR(fd,&all_fds);
+    }
+    client_fds.clear();
+    }
+ 
 
 void Buffer::appendData(const char*data,ssize_t length){
     recv_buffer.append(data,length);
@@ -182,7 +203,7 @@ void TCPServer::eventLoop(){
         poller.addFd(new_fd);
     }
     // client_fds作为vector类型已经在addFd()里面被push_back过了，这里直接用
-    for(int fd:client_fds){
+    for(int fd:poller.client_fds){
           if (poller.isReady(fd)){
             handleClientData(fd);
             }
@@ -195,9 +216,7 @@ void TCPServer::eventLoop(){
 void TCPServer::handleClientData(int client_fd){
     int listen_fd=listener.getFd();
     // char buffer[BUFFER_SIZE];取消通用连接池, 并且BUFFER_SIZE变更为RECV_BUFSIZE
-
     char temp_buffer[4096];
-
     ssize_t bytes_read;
     
     bytes_read=recv(client_fd,temp_buffer,sizeof(temp_buffer),0);
@@ -206,28 +225,11 @@ void TCPServer::handleClientData(int client_fd){
         if(bytes_read==0){
             std::cout<<"news Client disconnected"<<std::endl;
         }
-
         else{
             std::cerr<<"Receive error"<<std::endl;
         }
-
         // 清理资源并返回
-        ::close(client_fd);
-        FD_CLR(client_fd,&all_fds);
-        
-        auto it=std::find(client_fds.begin(),client_fds.end(),client_fd);
-
-        
-        if(it!=client_fds.end()){
-        client_fds.erase(it);   // 将此fd从vector中删除
-        }
-
-        if(client_fd==max_fd){
-            max_fd=listen_fd;   //重置fd再遍历寻找最大值
-            for(int fd:client_fds){
-                if(fd>max_fd)max_fd=fd;
-            }
-        }
+        poller.removeFd(client_fd);
         return;
     }
 
@@ -252,12 +254,7 @@ void TCPServer::handleClientData(int client_fd){
 }
 
 
-void TCPServer::cleanupClient(){
-    for(int fd:client_fds){
-        ::close(fd);
-        FD_CLR(fd,&all_fds);
-    }
-    client_fds.clear();
-    }
- 
+
+
+
 
