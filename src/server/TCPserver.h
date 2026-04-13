@@ -6,9 +6,11 @@
 #include<string>
 #include<vector>
 #include<map>
-
 class Connection;  // 前置声明
 class ConnectionManager;  // 因为有互相依赖
+
+using MessageCallback=std::string (*)(char const* msg,size_t len); 
+using CloseCallback=void (*)(int fd,ConnectionManager* connmgr);
 
 class SocketListener{
     public:
@@ -82,15 +84,15 @@ class ConnectionManager{
 
 class Connection{
     public:
-    void handleClientData(int client_fd);
+    void recv(int client_fd);
+    void send(int client_fd);
     Connection(int client_fd);
     Connection();    
 
-    using CloseCallback=void (*)(int fd,ConnectionManager* connmgr);
+    void setMessageCallback(MessageCallback cb);
     void setCloseCallback(CloseCallback close_cb,ConnectionManager* connmgr);    
     
-    using MessageCallback=std::string (*)(char const* msg,ssize_t len);
-    void setMessageCallback(MessageCallback cb);
+
 
     private:
     int client_fd;
@@ -104,12 +106,8 @@ class TCPServer{
     public:
     TCPServer(int port);
     ~TCPServer();
-
-    using MessageCallback=std::string (*)(char const* msg,ssize_t len);
-    void setMessageCallback(MessageCallback cb);
-
     void eventLoop();
-    
+    void setMessageCallback(MessageCallback cb);
     private:
     //void handleClientData(int client_fd);
 

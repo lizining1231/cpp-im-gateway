@@ -150,8 +150,6 @@ void SelectPoller::removeFd(int client_fd){
     }
 }
 
-
-
 void SelectPoller::closeAllClients(){
     for(int fd:client_fds){
         ::close(fd);
@@ -161,8 +159,8 @@ void SelectPoller::closeAllClients(){
     }
  
 
-void Buffer::appendData(const char*data,ssize_t length){
-    recv_buffer.append(data,length);
+void Buffer::appendData(const char*data,ssize_t len){
+    recv_buffer.append(data,len);
 }
 
 bool Buffer::takeData(std::string& request,const std::string& delimeter){
@@ -220,12 +218,11 @@ void Connection::setMessageCallback(MessageCallback handleMessage){
     handler=handleMessage;
 }
 
-void Connection::handleClientData(int client_fd){
-    // char buffer[BUFFER_SIZE];取消通用连接池, 并且BUFFER_SIZE变更为RECV_BUFSIZE
+void Connection::recv(int client_fd){
     char temp_buffer[4096];
     ssize_t bytes_read;
     
-    bytes_read=recv(client_fd,temp_buffer,sizeof(temp_buffer),0);
+    bytes_read=::recv(client_fd,temp_buffer,sizeof(temp_buffer),0);
     if(bytes_read<=0){
         if(bytes_read==0){
             std::cout<<"Client disconnected"<<std::endl;
@@ -238,12 +235,15 @@ void Connection::handleClientData(int client_fd){
         return;
     }
 
-    std::string request;
-    //conn.connections[client_fd].recv_buffer.appendData();   // 为进行职责分离, 将临时缓冲区的数据追加到永久缓冲区, 永久缓冲区负责处理
+    // 为进行职责分离, 将临时缓冲区的数据追加到永久缓冲区, 永久缓冲区负责处理
     if(this){
         this->recv_buffer.appendData(temp_buffer,bytes_read);
     }// 不用写else，因为如果没有conn什么都不用做
 
+}
+
+void Connection::send(int client_fd){
+    std::string request;
     // 用while(1)会导致调度不均, 我们这里控制每次处理的请求量request_count为5个
     for(int request_count=0;request_count<5;request_count++){
          if (!this) {
@@ -256,9 +256,9 @@ void Connection::handleClientData(int client_fd){
         // 依赖反转
         if (!handler) std::cout << "handler 为空!\n";
         
-        std::string response=handler(request.c_str(), bytes_read);
+        std::string response=handler(request.c_str(), request.size());
         
-        if(send(client_fd, response.c_str(), response.length(), 0)<0){
+        if(::send(client_fd, response.c_str(), response.length(), 0)<0){
             std::cerr<<" send error"<<std::endl;
         }
     }   
@@ -276,8 +276,8 @@ connmgr(&poller)
 
 TCPServer::~TCPServer(){}
 
-void TCPServer::setMessageCallback(MessageCallback handleMessage){
-    user_handler=handleMessage;
+void TCPServer::setMessageCallback(MessageCallback cb){
+    user_handler=cb;
 }
 
 void TCPServer::eventLoop(){
@@ -301,7 +301,8 @@ void TCPServer::eventLoop(){
     for(int fd:poller.client_fds){
           if (poller.isReady(fd)){
             Connection* conn=connmgr.getconn(fd);
-            conn->handleClientData(fd);
+            conn->recv(fd);
+            conn->send(fd);
             }
         }
 
