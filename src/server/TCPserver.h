@@ -51,15 +51,6 @@ class SelectPoller{
 
 };
 
-/*class EventLoop{
-    public:
-    void start();
-    void stop();
-    private:
-    
-};*/
-
-
 class Buffer{
     public:
     void appendData(const char*data,ssize_t length);
@@ -102,20 +93,22 @@ class Connection{
     MessageCallback handler;
 };
 
-class TCPServer{ 
+class EventLoop{
     public:
-    TCPServer(int port);
-    ~TCPServer();
-    void eventLoop();
+    EventLoop(int port);
+    ~EventLoop();
+    void start();
+    void stop();
     void setMessageCallback(MessageCallback cb);
+    
     private:
-    //void handleClientData(int client_fd);
-
     SocketListener listener;
     SelectPoller poller;
     ConnectionManager connmgr;
     MessageCallback user_handler;
-
+    bool running_;
 };
+
+
 
 #endif

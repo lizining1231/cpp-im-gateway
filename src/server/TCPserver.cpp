@@ -265,8 +265,8 @@ void Connection::send(int client_fd){
 }
 
 
-// TCPServer类的实现
-TCPServer::TCPServer(int port):
+// EventLoop类的实现
+EventLoop::EventLoop(int port):
 listener(port),
 poller(listener.getFd()),
 connmgr(&poller)
@@ -274,16 +274,18 @@ connmgr(&poller)
     std::cout<<"the initialized TCP server on port"<<port<<std::endl;
 }
 
-TCPServer::~TCPServer(){}
+EventLoop::~EventLoop(){}
 
-void TCPServer::setMessageCallback(MessageCallback cb){
+void EventLoop::setMessageCallback(MessageCallback cb){
     user_handler=cb;
 }
 
-void TCPServer::eventLoop(){
+void EventLoop::start(){
     int listen_fd=listener.getFd();
 
-    while(1){
+    running_=true;
+
+    while(running_){
     poller.wait();
     
     //只检查 listen_fd 是否就绪，避免 wait() 内部遍历 0~max_fd
@@ -309,3 +311,6 @@ void TCPServer::eventLoop(){
     }  
 }
 
+void EventLoop::stop(){
+    running_=false;
+}

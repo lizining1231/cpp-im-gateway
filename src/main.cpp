@@ -4,7 +4,7 @@
 #include <string>
 #include <cstring>
 
-std::string handleMessage(char const* request,ssize_t bytes_read){     // 之后可以改成const *std::string, 无需兼容数组
+std::string handleMessage(char const* request,size_t len){     // 之后可以改成const *std::string, 无需兼容数组
     
     bool is_http_request=(std::strstr(request,"HTTP/")!=NULL);
 
@@ -19,7 +19,7 @@ std::string handleMessage(char const* request,ssize_t bytes_read){     // 之后
             "hello,world\n";
         }else{
             // 正常TCP响应
-            return std::string(request,bytes_read);
+            return std::string(request,len);
         }
         
 }
@@ -43,9 +43,9 @@ int main(int argc,char* argv[]){
 
         std::cout<<"TCP server started"<<std::endl;
 
-        TCPServer server(port);
-        server.setMessageCallback(handleMessage);    // 把用户的业务逻辑传给库
-        server.eventLoop();
+        EventLoop loop(port);
+        loop.setMessageCallback(handleMessage);    // 把用户的业务逻辑传给库
+        loop.start();
 
         std::cout<<"TCP server stopped"<<std::endl;
         return 0;
