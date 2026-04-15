@@ -218,6 +218,10 @@ void Connection::setMessageCallback(MessageCallback handleMessage){
     handler=handleMessage;
 }
 
+void Connection::setDelimeter(const std::string& delim){
+    delimeter_=delim;
+}
+
 void Connection::recv(int client_fd){
     char temp_buffer[4096];
     ssize_t bytes_read;
@@ -250,7 +254,7 @@ void Connection::send(int client_fd){
             return;
         }
 
-        if(!this->recv_buffer.takeData(request,"\r\n\r\n")){
+        if(!this->recv_buffer.takeData(request,delimeter_)){
             break;
         }
         // 依赖反转
@@ -269,7 +273,8 @@ void Connection::send(int client_fd){
 EventLoop::EventLoop(int port):
 listener(port),
 poller(listener.getFd()),
-connmgr(&poller)
+connmgr(&poller),
+delimeter_("")
 {
     std::cout<<"the initialized TCP server on port"<<port<<std::endl;
 }
@@ -278,6 +283,10 @@ EventLoop::~EventLoop(){}
 
 void EventLoop::setMessageCallback(MessageCallback cb){
     user_handler=cb;
+}
+
+void EventLoop::setDelimeter(const std::string& delim){
+    delimeter_=delim;
 }
 
 void EventLoop::start(){
@@ -298,6 +307,7 @@ void EventLoop::start(){
         
         conn->setMessageCallback(user_handler);
         conn->setCloseCallback(onConnectionClose, &connmgr);
+        conn->setDelimeter(delimeter_);
     }
     // client_fds作为vector类型已经在addFd()里面被push_back过了，这里直接用
     for(int fd:poller.client_fds){

@@ -75,17 +75,21 @@ class ConnectionManager{
 
 class Connection{
     public:
-    void recv(int client_fd);
     void send(int client_fd);
+    void recv(int client_fd);
+    
     Connection(int client_fd);
     Connection();    
-
+    
     void setMessageCallback(MessageCallback cb);
     void setCloseCallback(CloseCallback close_cb,ConnectionManager* connmgr);    
     
+    void setDelimeter(const std::string& delim);
 
 
     private:
+    
+    std::string delimeter_;
     int client_fd;
     Buffer recv_buffer;
     ConnectionManager* connmgr_;
@@ -100,15 +104,15 @@ class EventLoop{
     void start();
     void stop();
     void setMessageCallback(MessageCallback cb);
-    
+    void setDelimeter(const std::string& delim);
     private:
     SocketListener listener;
     SelectPoller poller;
     ConnectionManager connmgr;
     MessageCallback user_handler;
     bool running_;
+    std::string delimeter_;
 };
-
 
 
 #endif

@@ -45,6 +45,7 @@ int main(int argc,char* argv[]){
 
         EventLoop loop(port);
         loop.setMessageCallback(handleMessage);    // 把用户的业务逻辑传给库
+        loop.setDelimeter("\r\n\r\n");
         loop.start();
 
         std::cout<<"TCP server stopped"<<std::endl;
