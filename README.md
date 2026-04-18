@@ -104,38 +104,38 @@ https://mp.weixin.qq.com/s/Kn-uA6J0l83c6KVfErxMQQ
 - CPU使用率：？% → ？%（降低？%）
 - malloc调用：？次/秒 → ？次/秒（减少？%）
 ### 架构说明
+```mermaid
+flowchart TD
+    EventLoop[EventLoop<br>主事件循环<br>协调所有组件，驱动整个服务器]
 
-┌─────────────────────────────────────────────────────────────────┐
-│                      EventLoop (主事件循环)                       │
-│                    协调所有组件，驱动整个服务器                      │
-└───────────────┬─────────────────┬───────────────────────────────┘
-                │                 │
-                ▼                 ▼
-    ┌───────────────┐    ┌───────────────┐    ┌───────────────────┐
-    │ SocketListener│    │  SelectPoller │    │ ConnectionManager │
-    │  套接字监听器 │    │  I/O多路复用   │    │   多连接管理器     │
-    │               │    │   (select)    │    │ fd→Connection映射  │
-    └───────┬───────┘    └───────┬───────┘    └─────────┬─────────┘
-            │                    │                      │
-            │ 接受新连接         │ 监控socket事件        │ 管理
-            └────────────────────┼──────────────────────┘
-                                 │
-                                 ▼
-              ┌─────────────────────────────────────┐
-              │           活动连接集合              │
-              ├─────────────┬─────────────┬─────────┤
-              │ Connection1 │ Connection2 │ConnectionN │
-              └──────┬──────┴──────┬──────┴─────┬───┘
-                     │             │            │
-                     ▼             ▼            ▼
-              ┌───────────┐ ┌───────────┐ ┌───────────┐
-              │  Buffer   │ │  Buffer   │ │  Buffer   │
-              │ 数据缓冲区 │ │ 数据缓冲区│ │ 数据缓冲区│
-              ├───────────┤ ├───────────┤ ├───────────┤
-              │消息回调   │ │消息回调   │ │ 消息回调   │
-              │关闭回调   │ │关闭回调   │ │ 关闭回调   │
-              └───────────┘ └───────────┘ └───────────┘
-              
+    EventLoop --> SocketListener
+    EventLoop --> SelectPoller
+    EventLoop --> ConnectionManager
+
+    SocketListener[SocketListener<br>套接字监听器<br>接受新连接]
+    SelectPoller[SelectPoller<br>I/O多路复用<br>(select)<br>监控socket事件]
+    ConnectionManager[ConnectionManager<br>多连接管理器<br>fd→Connection映射]
+
+    SocketListener --> ActiveConns
+    SelectPoller --> ActiveConns
+    ConnectionManager --> ActiveConns
+
+    ActiveConns[活动连接集合]
+
+    ActiveConns --> Conn1
+    ActiveConns --> Conn2
+    ActiveConns --> ConnN
+
+    Conn1[Connection1] --> Buffer1
+    Conn2[Connection2] --> Buffer2
+    ConnN[ConnectionN] --> BufferN
+
+    Buffer1[Buffer<br>数据缓冲区<br>消息回调<br>关闭回调]
+    Buffer2[Buffer<br>数据缓冲区<br>消息回调<br>关闭回调]
+    BufferN[Buffer<br>数据缓冲区<br>消息回调<br>关闭回调]
+```
+
+           
 核心组件：
 EventLoop 
 - 主事件循环
