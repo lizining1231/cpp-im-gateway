@@ -1,75 +1,98 @@
-# Build files
+# ============================================
+# 编译构建文件
+# ============================================
+# 构建输出目录
 build/
 bin/
 lib/
 obj/
-*.o
-*.so
-*.a
-*.out
-TCPserver
-echo_server
 
-# CMake generated files
+# 编译生成的目标文件
+*.o          # 编译中间文件
+*.so         # 动态链接库
+*.a          # 静态链接库
+*.out        # 可执行文件（通用）
+
+# 特定的可执行文件
+TCPserver    # TCP 服务器程序
+cpp-im-gateway  # 主程序可执行文件
+
+# ============================================
+# CMake 生成的文件
+# ============================================
 CMakeCache.txt
 CMakeFiles/
 cmake_install.cmake
 Makefile
-compile_commands.json
+compile_commands.json   # 编译数据库（用于 IDE 智能提示）
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
+# ============================================
+# IDE 编辑器配置
+# ============================================
+.vscode/                 # VS Code 配置
+.idea/                   # CLion/IntelliJ 配置
+*.swp                    # Vim 交换文件
+*.swo                    # Vim 交换文件
 
-# Executables
-cpp-im-gateway
-# Build files
-build/
-bin/
-lib/
-obj/
-*.o
-*.so
-*.a
-*.out
-TCPserver
+# ============================================
+# 环境变量配置
+# ============================================
+.env                     # 环境变量文件
+.env.*                   # 所有环境变量文件（如 .env.dev, .env.prod）
+!.env.example            # 但保留示例文件
 
-# CMake generated files
-CMakeCache.txt
-CMakeFiles/
-cmake_install.cmake
-Makefile
-compile_commands.json
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Executables
-cpp-im-gateway
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# Network address files (from testing)
+# ============================================
+# 网络地址测试文件（测试生成的地址绑定文件）
+# ============================================
 0.0.0.0:*
 [::]:*
 *:*
 
-# Benchmark and test reports
+# ============================================
+# 性能测试报告和日志
+# ============================================
+# 基准测试报告
 benchmark_report_*.txt
 benchmark_report_*.txt.tmp
+
+# 临时文件
 *.tmp
 *.temp
 *.log
 
-# Test artifacts
+# 测试产物
 test_*.txt
 test_*.log
 report_*.txt
+
+# ============================================
+# 状态测试日志文件（你项目中的具体测试输出）
+# ============================================
+# 忽略所有 status_test 开头的测试日志
+status_test_*.txt
+
+# ============================================
+# 备份文件
+# ============================================
+TCPserver-backup         # TCP 服务器备份
+sysctl_good*.txt         # 系统配置备份
+cpu_freq_good.txt        # CPU 频率配置备份
+
+# ============================================
+# 自定义忽略目录
+# ============================================
+wrk_result/              # wrk 性能测试结果
+study_draft/             # 学习草稿
+temporary_scripts/       # 临时脚本
+benchmark_report/        # 基准测试报告目录
+
+# ============================================
+# 文档和资源文件
+# ============================================
+docs/TODO.md             # 待办文档（如果不想提交）
+*.png                    # 图片文件（如有需要可取消注释）
+
+# ============================================
+# 可选：完全忽略所有 .txt 文件
+# （如果你确定不需要追踪任何 txt 文件，取消下面的注释）
+# *.txt
