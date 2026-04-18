@@ -3,18 +3,35 @@ version: '3.8'
 services:
   im-gateway:
     build: .
-    container_name: "im-gateway-${NODE_ENV:-dev}"
-    command: ["${PORT:-8080}"]
+    container_name: "im-gateway-${NODE_ENV:-test}"
     ports:
-      - "${EXTERNAL_PORT:-8080}:${PORT:-8080}"
+      - "${EXTERNAL_PORT:-18080}:${PORT:-8080}"
+    
+    # 资源限制 - 直接写死，确保生效
+    cpus: 4
+    mem_limit: 2g
+    mem_reservation: 1g
+    
+    # 或者用这种格式（二选一，不要同时用）
+    # deploy:
+    #   resources:
+    #     limits:
+    #       cpus: '4'
+    #       memory: 2G
+    #     reservations:
+    #       cpus: '2'
+    #       memory: 1G
+    
     environment:
-      NODE_ENV: ${NODE_ENV:-development}
+      NODE_ENV: ${NODE_ENV:-test}
       LOG_LEVEL: ${LOG_LEVEL:-info}
       MAX_CONNECTIONS: ${MAX_CONNECTIONS:-1000}
-    healthcheck:
-      test: ["CMD", "sh", "-c", "netstat -ltn | grep :${PORT:-8080} || exit 1"]
-      interval: ${HEALTH_CHECK_INTERVAL:-30s}
-    restart: ${RESTART_POLICY:-unless-stopped}
+      PORT: ${PORT:-8080}
+    
+    cap_add:
+      - SYS_PTRACE
+    
+    restart: "no"
     networks:
       - im-network
 

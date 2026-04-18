@@ -3,6 +3,9 @@
 ## 最终性能
 
 ## 演进/排查/优化过程
+1. 解决QPS暴跌95%问题
+2. 解决
+3. 
 
 ### 性能基准1：宿主机本地回环
 
@@ -52,19 +55,20 @@ Running 30s test @ http://localhost:18080
   Socket errors: connect 0, read 0, write 0, timeout 95
 Requests/sec:  10795.68   📍
 Transfer/sec:      0.99MB
+
+
 ### P99优化
 
-现状：
+数据摘要：wrk -t12 -c100 -d30s
 Latency Distribution
      50%    8.54ms
      75%    9.52ms
      90%   10.62ms
      99%  954.74ms
-
+现象：
 1. 并发数由100递增至1500的过程，QPS始终稳定在10000+
-2. 还没有实现计时器
-3. 平均延迟与P99都极高且有抖动症状
-4. P90与P99之间差了几百毫秒
+2. 100并发下P99抖动严重，范围是10ms-1000ms
+3. 200并发-1800并发，P99稳定至1000ms
 
 猜测：select模型的阻塞
 
@@ -82,7 +86,7 @@ Latency Distribution
     int activity=select(max_fd+1,&read_fds,NULL,NULL,&tv);
 ```
 
-现状：未得到缓解
+更改后现象：未得到缓解，与先前一样
 P99在100并发下抖动剧烈（10ms-1000ms），稳定于200并发，随200并发递增，P99从1000ms递增至1250ms
 QPS于400并发达到峰值
 
@@ -114,3 +118,85 @@ close的单次调用时间太长了，write次数过多，高达62.9万次
 1. 在Socket类中创建新的成员对象,string类型的recv_buffer, 并创建对应获取方法getRecv_buffer()。
 2. 将原本的buffer变更为char[]类型的temp_buffer, 作为函数内的临时缓冲区，用于接收数据
 3. 将temp_buffer的数据append到recv_buffer, 拆分过多的请求量，拼接不完整的请求，每次只处理一个请求
+
+更改后现象：
+1. 并发数由100递增至1500的过程，QPS始终稳定在10000+
+2. 100并发下P99不再抖动，稳定至11ms-12ms间
+3. 200并发-1800并发，P99依旧稳定在1000ms
+
+怀疑依旧是调度不均或达到系统瓶颈、我需要先让脚本输出一下200并发以后的P99去判断是调度不均还是达到系统瓶颈
+
+跑了一遍压测脚本，100并发的QPS从1w+跌倒7k+，P99也崩到了600ms，明明昨天跑了五六遍，现象都一致，我现在毫无头绪，我再去跑一遍
+
+Running 30s test @ http://localhost:18080
+  12 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    25.78ms   93.12ms 983.92ms   97.49%
+    Req/Sec   653.28     89.38     0.90k    74.02%
+  Latency Distribution
+     50%   11.96ms
+     75%   13.50ms
+     90%   15.49ms
+     99%  636.76ms🔺
+  235394 requests in 31.06s, 21.55MB read
+Requests/sec:   7578.63📍
+Transfer/sec:    710.50KB
+
+还有一个关键现象，就是随着并发数上升，P50、P75、P90也在递增，而且仅仅是P50都在高并发下崩的一塌糊涂
+
+第二遍:
+Running 30s test @ http://localhost:18080
+  12 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    37.49ms  151.36ms   1.36s    96.64%
+    Req/Sec   701.27     58.14     0.86k    82.36%
+  Latency Distribution
+     50%   11.34ms
+     75%   12.56ms
+     90%   13.89ms
+     99%    1.02s 🔺
+  252809 requests in 31.44s, 23.15MB read
+Requests/sec:   8040.22📍
+Transfer/sec:    753.77KB
+
+第三遍：
+Running 30s test @ http://localhost:18080
+  12 threads and 100 connections
+  Thread Stats   Avg      Stdev     Max   +/- Stdev
+    Latency    25.70ms   91.44ms 962.77ms   97.50%
+    Req/Sec   643.74     72.11   818.00     69.84%
+  Latency Distribution
+     50%   12.24ms
+     75%   13.62ms
+     90%   15.35ms
+     99%  626.13ms🔺
+  232055 requests in 31.05s, 21.25MB read
+Requests/sec:   7474.11📍
+Transfer/sec:    700.70KB
+
+1. 先检测参数配置还在不在:
+
+lizining@Y:~/projects/cpp-im-gateway$ sysctl net.ipv4.tcp_tw_reuse
+net.ipv4.tcp_tw_reuse = 1
+lizining@Y:~/projects/cpp-im-gateway$ sysctl net.ipv4.tcp_fin_timeout
+net.ipv4.tcp_fin_timeout = 30
+✅在
+
+2. 回滚到创建单独缓冲区前判断一下，是缓冲区引发的问题还是环境问题，可是明明缓冲区改完之后跑了5-6遍，QPS都非常稳定，大概率问题出在环境上
+
+3. 还没有尝试回滚，电脑提示进入省电模式，有可能是因为电脑未插电而且电量低！
+
+充满电之后完美复现
+  QPS: 11163.43  延迟:  8.49ms  P99: 11.96ms  错误:   0  \033[0;32m正常\033[0m
+--- 测试 200 并发 ---
+  QPS: 11318.97  延迟: 122.89ms  P99: 1.01s  错误:   0  \033[0;31m过载\033[0m
+--- 测试 400 并发 ---
+  QPS: 11358.20  延迟: 186.13ms  P99: 1.15s  错误:   0  \033[0;31m过载\033[0m
+--- 测试 600 并发 ---
+  QPS: 10758.29  延迟: 178.77ms  P99: 1.18s  错误:   0  \033[0;31m过载\033[0m
+--- 测试 800 并发 ---
+  QPS: 10306.50  延迟: 182.50ms  P99: 1.24s  错误:   0  \033[0;31m过载\033[0m
+--- 测试 1000 并发 ---
+  QPS: 10566.85  延迟: 170.18ms  P99: 1.24s  错误:   0  \033[0;31m过载\033[0m
+
+惨痛教训：以后性能无故回退先检查最基础的问题、再检查参数等软问题
