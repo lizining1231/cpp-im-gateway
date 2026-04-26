@@ -223,6 +223,12 @@ void Connection::setDelimeter(const std::string& delim){
 }
 
 void Connection::recv(int client_fd){
+
+    
+    if(this == nullptr) {
+        return;
+    }
+
     char temp_buffer[4096];
     ssize_t bytes_read;
     
@@ -312,7 +318,13 @@ void EventLoop::start(){
     // client_fds作为vector类型已经在addFd()里面被push_back过了，这里直接用
     for(int fd:poller.client_fds){
           if (poller.isReady(fd)){
+            
             Connection* conn=connmgr.getconn(fd);
+            
+            if(conn==nullptr){
+                continue;
+            }
+
             conn->recv(fd);
             conn->send(fd);
             }
