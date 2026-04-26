@@ -55,11 +55,11 @@ compile_commands.json   # 编译数据库（用于 IDE 智能提示）
 benchmark_report_*.txt
 benchmark_report_*.txt.tmp
 
-# 临时文件
+# 临时文件或文件夹
 *.tmp
 *.temp
 *.log
-
+.private_scripts/
 # 测试产物
 test_*.txt
 test_*.log
